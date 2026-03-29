@@ -3,14 +3,14 @@ from datetime import datetime, timezone
 
 import orjson
 from fastapi.websockets import WebSocket
-from sqlalchemy.orm.session import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import PriceChange, Symbol
 
 
-class DataIngestionService:
+class RelayService:
     def __init__(
-        self, queue: asyncio.Queue, db: Session, connected: set[WebSocket]
+        self, queue: asyncio.Queue, db: AsyncSession, connected: set[WebSocket]
     ) -> None:
         self.queue = queue
         self.db = db
@@ -33,7 +33,7 @@ class DataIngestionService:
             timestamp=datetime.fromtimestamp(data["E"] / 1000, tz=timezone.utc),
         )
         await self._relay(processed_data)
-        # await self._save_record(processed_data)
+        await self._save_record(processed_data)
         self.queue.task_done()
 
     async def _relay(self, data):
@@ -46,6 +46,6 @@ class DataIngestionService:
     async def _save_record(self, data):
         try:
             self.db.add(PriceChange(**data))
-            self.db.commit()
+            await self.db.commit()
         except Exception as e:
             print(e)

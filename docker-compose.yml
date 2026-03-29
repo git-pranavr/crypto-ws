@@ -21,7 +21,7 @@ services:
         volumes:
             - .:/app
         environment:
-            DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+            DATABASE_URL: postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
             PORT: ${PORT}
         depends_on:
             db:

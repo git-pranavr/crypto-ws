@@ -4,9 +4,9 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
 from app.client import BinanceClient
-from app.database import get_db
+from app.database import AsyncSessionLocal
 from app.models import Symbol
-from app.service import DataIngestionService
+from app.service import RelayService
 
 connected: set[WebSocket] = set()
 queue = asyncio.Queue(maxsize=1024)
@@ -14,26 +14,23 @@ queue = asyncio.Queue(maxsize=1024)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    db_gen = get_db()
-    db = next(db_gen)
 
-    client = BinanceClient(list(Symbol), queue)
-    ingestor = DataIngestionService(queue, db, connected)
+    async with AsyncSessionLocal() as db:
+        client = BinanceClient(list(Symbol), queue)
+        relay = RelayService(queue, db, connected)
 
-    producer_task = asyncio.create_task(client.listen())
-    consumer_task = asyncio.create_task(ingestor.start_processing())
+        producer_task = asyncio.create_task(client.listen())
+        consumer_task = asyncio.create_task(relay.start_processing())
 
-    yield
+        yield
 
-    producer_task.cancel()
-    consumer_task.cancel()
+        producer_task.cancel()
+        consumer_task.cancel()
 
-    try:
-        await asyncio.gather(producer_task, consumer_task)
-    except asyncio.CancelledError:
-        pass
-    finally:
-        db_gen.close()
+        try:
+            await asyncio.gather(producer_task, consumer_task)
+        except asyncio.CancelledError:
+            pass
 
 
 app = FastAPI(lifespan=lifespan)
@@ -41,7 +38,7 @@ app = FastAPI(lifespan=lifespan)
 
 @app.get("/health")
 async def health_check():
-    return {"status": "online", "items_in_queue": queue.qsize()}
+    return {"status": "online"}
 
 
 @app.websocket("/ws")

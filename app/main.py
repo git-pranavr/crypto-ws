@@ -1,11 +1,14 @@
 import asyncio
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, WebSocket, WebSocketDisconnect
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.client import BinanceClient
-from app.database import AsyncSessionLocal
+from app.crud import get_last_prices
+from app.database import AsyncSessionLocal, get_db
 from app.models import Symbol
+from app.schemas import LastPrice
 from app.service import RelayService
 
 connected: set[WebSocket] = set()
@@ -51,3 +54,8 @@ async def websocket_endpoint(websocket: WebSocket):
         pass
     finally:
         connected.discard(websocket)
+
+
+@app.get("/price", response_model=list[LastPrice])
+async def get_price(db: AsyncSession = Depends(get_db)):
+    return await get_last_prices(db)

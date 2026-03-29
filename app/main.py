@@ -5,13 +5,14 @@ from fastapi import Depends, FastAPI, WebSocket, WebSocketDisconnect
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.client import BinanceClient
+from app.connections import ConnectionManager
 from app.crud import get_last_prices
 from app.database import AsyncSessionLocal, get_db
 from app.models import Symbol
 from app.schemas import LastPrice
 from app.service import RelayService
 
-connected: set[WebSocket] = set()
+connection_manager = ConnectionManager()
 queue = asyncio.Queue(maxsize=1024)
 
 
@@ -20,7 +21,7 @@ async def lifespan(app: FastAPI):
 
     async with AsyncSessionLocal() as db:
         client = BinanceClient(list(Symbol), queue)
-        relay = RelayService(queue, db, connected)
+        relay = RelayService(queue, db, connection_manager.get_active_connections())
 
         producer_task = asyncio.create_task(client.listen())
         consumer_task = asyncio.create_task(relay.start_processing())
@@ -46,14 +47,13 @@ async def health_check():
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    await websocket.accept()
-    connected.add(websocket)
+    if not await connection_manager.connect(websocket):
+        return
+
     try:
         await websocket.receive_text()
     except WebSocketDisconnect:
-        pass
-    finally:
-        connected.discard(websocket)
+        connection_manager.disconnect(websocket)
 
 
 @app.get("/price", response_model=list[LastPrice])

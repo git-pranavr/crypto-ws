@@ -15,7 +15,6 @@ services:
 
     server:
         build: .
-        entrypoint: ["/app/entrypoint.sh"]
         ports:
             - "${PORT}:${PORT}"
         volumes:

@@ -25,3 +25,28 @@ docker compose up --build
 ```
 
 The server will start on `http://localhost:8000` and run database migrations automatically on startup.
+
+## Railway Deploy
+
+This repo is set up for the simplest Railway layout:
+- 1 app service built from the root `Dockerfile`
+- 1 Railway PostgreSQL service
+
+### Recommended setup
+
+1. Deploy this repo as a new Railway service.
+2. Add a PostgreSQL service to the same Railway project.
+3. In the app service variables, set:
+
+```env
+DATABASE_URL=${{Postgres.DATABASE_URL}}
+```
+
+If your database service is not named `Postgres`, replace the service name in the reference.
+
+### Notes
+
+- Railway will build from the checked-in `Dockerfile`.
+- Railway injects `PORT` automatically, so you do not need to define it manually in the app service.
+- The container starts with `entrypoint.sh`, retries migrations until the database is reachable, then starts Uvicorn on Railway's injected `PORT`.
+- `railway.json` configures the Docker builder and uses `GET /health` for the service healthcheck.

@@ -17,18 +17,20 @@ class BinanceClient:
     async def _reconnect(self):
         try:
             async with aconnect_ws(self.url) as conn:
-                try:
-                    await self._receive(conn)
-                except TimeoutError:
-                    await conn.ping()
+                await self._receive(conn)
         except Exception:
             await asyncio.sleep(5)
 
     async def _receive(self, conn: AsyncWebSocketSession):
-        message = await conn.receive(timeout=5)
+        while True:
+            try:
+                message = await conn.receive(timeout=5)
+            except TimeoutError:
+                await conn.ping()
+                continue
 
-        try:
-            self.queue.put_nowait(message)
-        except asyncio.QueueFull:
-            self.queue.get_nowait()  # pop oldest
-            self.queue.put_nowait(message)
+            try:
+                self.queue.put_nowait(message)
+            except asyncio.QueueFull:
+                self.queue.get_nowait()  # pop oldest
+                self.queue.put_nowait(message)

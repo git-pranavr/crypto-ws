@@ -1,4 +1,8 @@
+import logging
+
 from fastapi import WebSocket
+
+logger = logging.getLogger(__name__)
 
 
 class ConnectionManager:
@@ -11,12 +15,24 @@ class ConnectionManager:
 
     async def connect(self, websocket: WebSocket) -> bool:
         if len(self.active_connections) >= self.max_connections:
+            logger.warning(
+                "Rejecting websocket client: max connections reached (%s)",
+                self.max_connections,
+            )
             await websocket.close(code=1008)
             return False
 
         await websocket.accept()
         self.active_connections.add(websocket)
+        logger.info(
+            "Websocket client connected. Active websocket clients=%s",
+            len(self.active_connections),
+        )
         return True
 
     def disconnect(self, websocket: WebSocket):
         self.active_connections.discard(websocket)
+        logger.info(
+            "Websocket client disconnected. Active websocket clients=%s",
+            len(self.active_connections),
+        )

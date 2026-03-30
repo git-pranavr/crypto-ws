@@ -50,3 +50,12 @@ If your database service is not named `Postgres`, replace the service name in th
 - Railway injects `PORT` automatically, so you do not need to define it manually in the app service.
 - The container starts with `entrypoint.sh`, retries migrations until the database is reachable, then starts Uvicorn on Railway's injected `PORT`.
 - `railway.json` configures the Docker builder and uses `GET /health` for the service healthcheck.
+- The market-data relay requires outbound WebSocket access to Binance. By default the app tries `wss://data-stream.binance.vision` first, then `wss://stream.binance.com:443`, and only uses `:9443` as a last fallback. If your platform enforces egress rules, whitelist those hosts on port `443`.
+
+### Optional variables
+
+```env
+BINANCE_WS_BASE_URLS=wss://data-stream.binance.vision,wss://stream.binance.com:443,wss://stream.binance.com:9443
+```
+
+Use `BINANCE_WS_BASE_URLS` to override the upstream WebSocket endpoints or their order.

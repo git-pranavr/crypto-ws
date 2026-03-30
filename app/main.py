@@ -59,6 +59,15 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 
+@app.get("/")
+async def root():
+    return {
+        "message": "Service is running.",
+        "docs": "/docs",
+        "health": "/health",
+    }
+
+
 @app.get("/health")
 async def health_check(db: AsyncSession = Depends(get_db)):
     now = datetime.now(timezone.utc)

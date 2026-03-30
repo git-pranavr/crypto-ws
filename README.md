@@ -25,3 +25,10 @@ docker compose up --build
 ```
 
 The server will start on `http://localhost:8000` and run database migrations automatically on startup.
+
+## Deployment
+
+Live Railway deployment:
+- App base URL: `https://crypto-ws-production.up.railway.app/`
+- Health endpoint: `https://crypto-ws-production.up.railway.app/health`
+- Price endpoint: `https://crypto-ws-production.up.railway.app/price`
